@@ -1,0 +1,225 @@
+:root {
+  /* Sky Blue Theme Colors */
+  --primary-color: #87CEEB;
+  --primary-dark: #5BA0C0;
+  --primary-light: #B0E0E6;
+  --primary-lighter: #E0F6FF;
+  
+  --secondary-color: #4682B4;
+  --secondary-dark: #1E5F8E;
+  --secondary-light: #6495ED;
+  
+  --accent-color: #00CED1;
+  --accent-dark: #008B8B;
+  --accent-light: #40E0D0;
+  
+  /* Neutral Colors */
+  --background-color: #F8FAFB;
+  --surface-color: #FFFFFF;
+  --card-background: #FFFFFF;
+  
+  --text-primary: #2C3E50;
+  --text-secondary: #546E7A;
+  --text-disabled: #90A4AE;
+  
+  --border-color: #E1E8ED;
+  --divider-color: #F0F3F7;
+  
+  --shadow-sm: 0 1px 3px rgba(135, 206, 235, 0.12);
+  --shadow-md: 0 4px 6px rgba(135, 206, 235, 0.15);
+  --shadow-lg: 0 10px 15px rgba(135, 206, 235, 0.2);
+  --shadow-xl: 0 20px 25px rgba(135, 206, 235, 0.25);
+  
+  /* Status Colors */
+  --success-color: #52C41A;
+  --warning-color: #FAAD14;
+  --error-color: #FF4D4F;
+  --info-color: #1890FF;
+  
+  /* Sidebar Specific */
+  --sidebar-bg: #FFFFFF;
+  --sidebar-hover: #F0F8FF;
+  --sidebar-active: #E6F7FF;
+  --sidebar-border: #E1E8ED;
+  
+  /* Header Specific */
+  --header-bg: #FFFFFF;
+  --header-border: #E1E8ED;
+  
+  /* Form Colors */
+  --input-bg: #FFFFFF;
+  --input-border: #D1D9E0;
+  --input-focus: #87CEEB;
+  --input-hover: #B0E0E6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* Ant Design Theme Override */
+.ant-layout {
+  background: var(--background-color);
+}
+
+.ant-layout-header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-layout-sider {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+}
+
+.ant-menu {
+  background: var(--sidebar-bg);
+  border-right: none;
+}
+
+.ant-menu-item:hover {
+  background-color: var(--sidebar-hover);
+}
+
+.ant-menu-item-selected {
+  background-color: var(--sidebar-active);
+  color: var(--primary-color);
+}
+
+.ant-btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.ant-input:focus,
+.ant-input:hover {
+  border-color: var(--input-focus);
+}
+
+.ant-card {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-table-thead > tr > th {
+  background: var(--surface-color);
+  border-bottom: 2px solid var(--primary-light);
+}
+
+/* Utility Classes */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-disabled {
+  color: var(--text-disabled);
+}
+
+.bg-surface {
+  background: var(--surface-color);
+}
+
+.bg-primary {
+  background: var(--primary-color);
+}
+
+.bg-primary-light {
+  background: var(--primary-lighter);
+}
+
+.border-primary {
+  border-color: var(--primary-color);
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    z-index: 1000;
+    height: 100vh;
+  }
+  
+  .ant-layout-content {
+    margin-left: 0 !important;
+  }
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease-in-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
