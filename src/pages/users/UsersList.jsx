@@ -17,6 +17,8 @@ import {
   Row,
   Col,
   Divider,
+  Descriptions,
+  Image,
 } from 'antd'
 import {
   UserOutlined,
@@ -29,6 +31,8 @@ import {
   PhoneOutlined,
   LockOutlined,
   UploadOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../../services/api/adminApi'
@@ -47,6 +51,7 @@ const UsersList = () => {
   const [viewModalVisible, setViewModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [editImageUrl, setEditImageUrl] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
   const [form] = Form.useForm()
 
@@ -116,6 +121,15 @@ const UsersList = () => {
     }
   }
 
+  const handleEditImageChange = (info) => {
+    if (info.file.status === 'done') {
+      setEditImageUrl(info.file.response.url)
+      message.success('Profile image updated successfully')
+    } else if (info.file.status === 'error') {
+      message.error('Failed to upload profile image')
+    }
+  }
+
   const beforeUpload = (file) => {
     const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
     if (!isJpgOrPng) {
@@ -148,11 +162,17 @@ const UsersList = () => {
 
   const handleEditUser = (user) => {
     setSelectedUser(user)
+    setEditImageUrl(user.profile_image)
     form.setFieldsValue({
       name: user.name,
       email: user.email,
       role: user.role,
       phone: user.phone,
+      isActive: user.isActive,
+      bio: user.bio,
+      address: user.address,
+      city: user.city,
+      country: user.country,
     })
     setEditModalVisible(true)
   }
@@ -582,53 +602,116 @@ const UsersList = () => {
             Close
           </Button>
         ]}
-        width={600}
+        width={800}
+        style={{ top: 20 }}
       >
         {selectedUser && (
-          <div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Name:</strong> {selectedUser.name || 'No name'}
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Email:</strong> {selectedUser.email || 'No email'}
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Role:</strong>{' '}
-              <Tag color={
-                selectedUser.role === 'admin' ? 'red' :
-                selectedUser.role === 'agent' ? 'blue' : 'green'
-              }>
-                {(selectedUser.role || 'user').toUpperCase()}
-              </Tag>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Phone:</strong> {selectedUser.phone || 'No phone'}
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Status:</strong>{' '}
-              <Tag color={selectedUser.isActive ? 'green' : 'red'}>
-                {selectedUser.isActive ? 'ACTIVE' : 'INACTIVE'}
-              </Tag>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Joined:</strong> {selectedUser.createdAt ? 
-                new Date(selectedUser.createdAt).toLocaleString() : 
-                'Unknown'
-              }
-            </div>
-            {selectedUser.profile_image && (
-              <div style={{ marginBottom: 16 }}>
-                <strong>Profile Image:</strong>
-                <div style={{ marginTop: 8 }}>
-                  <img 
-                    src={selectedUser.profile_image} 
-                    alt={selectedUser.name}
-                    style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6 }}
-                  />
+          <Row gutter={[24, 24]}>
+            {/* User Profile Card */}
+            <Col xs={24} lg={8}>
+              <div style={{ textAlign: 'center' }}>
+                <Avatar
+                  size={100}
+                  icon={<UserOutlined />}
+                  src={selectedUser.profile_image}
+                  style={{ marginBottom: 16 }}
+                />
+                <Title level={4} style={{ margin: 0 }}>
+                  {selectedUser.name || 'No Name'}
+                </Title>
+                <Tag color={
+                  selectedUser.role === 'admin' ? 'red' :
+                  selectedUser.role === 'agent' ? 'blue' : 'green'
+                } style={{ marginBottom: 16 }}>
+                  {(selectedUser.role || 'user').toUpperCase()}
+                </Tag>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                  <Tag 
+                    color={selectedUser.isActive ? 'green' : 'red'}
+                    icon={selectedUser.isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                  >
+                    {selectedUser.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  </Tag>
                 </div>
               </div>
-            )}
-          </div>
+
+              <Divider />
+
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="User ID">
+                  <Text copyable style={{ fontSize: 12 }}>{selectedUser._id}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Joined">
+                  {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'Unknown'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Last Login">
+                  {selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString() : 'Never'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email Verified">
+                  <Tag color={selectedUser.isEmailVerified ? 'green' : 'orange'}>
+                    {selectedUser.isEmailVerified ? 'Verified' : 'Not Verified'}
+                  </Tag>
+                </Descriptions.Item>
+              </Descriptions>
+            </Col>
+
+            {/* User Information Card */}
+            <Col xs={24} lg={16}>
+              <Descriptions title="Personal Information" column={2} size="small">
+                <Descriptions.Item label="Full Name" span={2}>
+                  {selectedUser.name || 'Not provided'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email Address" span={2}>
+                  <Text copyable>{selectedUser.email || 'Not provided'}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Phone Number" span={2}>
+                  {selectedUser.phone || 'Not provided'}
+                </Descriptions.Item>
+                <Descriptions.Item label="User Role" span={2}>
+                  <Tag color={
+                    selectedUser.role === 'admin' ? 'red' :
+                    selectedUser.role === 'agent' ? 'blue' : 'green'
+                  }>
+                    {(selectedUser.role || 'user').toUpperCase()}
+                  </Tag>
+                </Descriptions.Item>
+              </Descriptions>
+
+              <Descriptions title="Address Information" column={2} size="small" style={{ marginTop: 16 }}>
+                <Descriptions.Item label="Address" span={2}>
+                  {selectedUser.address || 'Not provided'}
+                </Descriptions.Item>
+                <Descriptions.Item label="City" span={1}>
+                  {selectedUser.city || 'Not provided'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Country" span={1}>
+                  {selectedUser.country || 'Not provided'}
+                </Descriptions.Item>
+              </Descriptions>
+
+              {selectedUser.bio && (
+                <Descriptions title="Additional Information" column={1} size="small" style={{ marginTop: 16 }}>
+                  <Descriptions.Item label="Bio/Description">
+                    {selectedUser.bio}
+                  </Descriptions.Item>
+                </Descriptions>
+              )}
+
+              {selectedUser.profile_image && (
+                <div style={{ marginTop: 16 }}>
+                  <Text strong>Profile Image</Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Image
+                      width={150}
+                      src={selectedUser.profile_image}
+                      alt={selectedUser.name}
+                      style={{ borderRadius: 8 }}
+                    />
+                  </div>
+                </div>
+              )}
+            </Col>
+          </Row>
         )}
       </Modal>
 
@@ -636,9 +719,17 @@ const UsersList = () => {
       <Modal
         title="Edit User"
         open={editModalVisible}
-        onCancel={() => setEditModalVisible(false)}
+        onCancel={() => {
+          setEditModalVisible(false)
+          setEditImageUrl(null)
+          form.resetFields()
+        }}
         footer={[
-          <Button key="cancel" onClick={() => setEditModalVisible(false)}>
+          <Button key="cancel" onClick={() => {
+            setEditModalVisible(false)
+            setEditImageUrl(null)
+            form.resetFields()
+          }}>
             Cancel
           </Button>,
           <Button 
@@ -650,53 +741,194 @@ const UsersList = () => {
             Update User
           </Button>
         ]}
-        width={600}
+        width={800}
+        style={{ top: 20 }}
       >
         <Form
           form={form}
           layout="vertical"
-          onFinish={() => {
-            // TODO: Implement update user functionality
-            message.info('Update functionality coming soon')
+          onFinish={async (values) => {
+            try {
+              const userData = {
+                ...values,
+                profile_image: editImageUrl,
+              }
+              
+              await adminApi.updateUser(selectedUser._id, userData)
+              message.success('User updated successfully!')
+              setEditModalVisible(false)
+              setEditImageUrl(null)
+              form.resetFields()
+              queryClient.invalidateQueries(['users'])
+            } catch (error) {
+              message.error(error.response?.data?.message || 'Failed to update user')
+            }
           }}
         >
-          <Form.Item
-            label="Name"
-            name="name"
-            rules={[{ required: true, message: 'Please enter user name' }]}
-          >
-            <Input placeholder="Enter user name" />
-          </Form.Item>
+          <Row gutter={[24, 0]}>
+            {/* Left Column - Profile Image and Basic Info */}
+            <Col xs={24} lg={8}>
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <Upload
+                  name="profile_image"
+                  action={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload/image`}
+                  headers={{
+                    authorization: `Bearer ${localStorage.getItem('token')}`,
+                  }}
+                  beforeUpload={beforeUpload}
+                  onChange={handleEditImageChange}
+                  showUploadList={false}
+                >
+                  <div
+                    style={{
+                      width: 120,
+                      height: 120,
+                      border: '2px dashed #d9d9d9',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      margin: '0 auto',
+                      overflow: 'hidden',
+                      background: editImageUrl ? `url(${editImageUrl}) center/cover` : '#fafafa'
+                    }}
+                  >
+                    {editImageUrl ? (
+                      <img src={editImageUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center' }}>
+                        <UserOutlined style={{ fontSize: 36, color: '#d9d9d9' }} />
+                        <div style={{ marginTop: 4, fontSize: 10, color: '#666' }}>Upload Photo</div>
+                      </div>
+                    )}
+                  </div>
+                </Upload>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  Click to upload profile picture (JPG/PNG, max 2MB)
+                </Text>
+              </div>
 
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: 'Please enter email' },
-              { type: 'email', message: 'Please enter a valid email' }
-            ]}
-          >
-            <Input placeholder="Enter email address" />
-          </Form.Item>
+              <Form.Item
+                name="name"
+                label="Full Name"
+                rules={[
+                  { required: true, message: 'Please enter user\'s full name' },
+                  { max: 100, message: 'Name cannot exceed 100 characters' },
+                ]}
+              >
+                <Input 
+                  prefix={<UserOutlined />} 
+                  placeholder="Enter full name"
+                />
+              </Form.Item>
 
-          <Form.Item
-            label="Role"
-            name="role"
-            rules={[{ required: true, message: 'Please select role' }]}
-          >
-            <Select placeholder="Select role">
-              <Option value="user">User</Option>
-              <Option value="agent">Agent</Option>
-              <Option value="admin">Admin</Option>
-            </Select>
-          </Form.Item>
+              <Form.Item
+                name="email"
+                label="Email Address"
+                rules={[
+                  { required: true, message: 'Please enter email address' },
+                  { type: 'email', message: 'Please enter a valid email' },
+                ]}
+              >
+                <Input 
+                  prefix={<MailOutlined />} 
+                  placeholder="Enter email address"
+                />
+              </Form.Item>
 
-          <Form.Item
-            label="Phone"
-            name="phone"
-          >
-            <Input placeholder="Enter phone number" />
-          </Form.Item>
+              <Form.Item
+                name="phone"
+                label="Phone Number"
+                rules={[
+                  { required: true, message: 'Please enter phone number' },
+                  { pattern: /^[+]?[\d\s-()]+$/, message: 'Please enter a valid phone number' },
+                ]}
+              >
+                <Input 
+                  prefix={<PhoneOutlined />} 
+                  placeholder="Enter phone number"
+                />
+              </Form.Item>
+            </Col>
+
+            {/* Right Column - Account Details */}
+            <Col xs={24} lg={16}>
+              <Divider orientation="left">Account Information</Divider>
+
+              <Row gutter={[16, 0]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="role"
+                    label="User Role"
+                  >
+                    <Select placeholder="User role (read-only)" disabled>
+                      <Option value="user">User</Option>
+                      <Option value="agent">Agent</Option>
+                      <Option value="admin">Admin</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="isActive"
+                    label="Account Status"
+                    rules={[{ required: true, message: 'Please select account status' }]}
+                  >
+                    <Select placeholder="Select account status">
+                      <Option value={true}>Active</Option>
+                      <Option value={false}>Inactive</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Divider orientation="left">Additional Information</Divider>
+
+              <Form.Item
+                name="bio"
+                label="Bio/Description"
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Enter user bio or description (optional)"
+                  maxLength={500}
+                  showCount
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="address"
+                label="Address"
+              >
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Enter user address (optional)"
+                />
+              </Form.Item>
+
+              <Row gutter={[16, 0]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="city"
+                    label="City"
+                  >
+                    <Input placeholder="Enter city (optional)" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="country"
+                    label="Country"
+                  >
+                    <Input placeholder="Enter country (optional)" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>
