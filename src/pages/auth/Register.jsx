@@ -41,7 +41,7 @@ const Register = () => {
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
           borderRadius: '12px'
         }}
-        bodyStyle={{ padding: '40px' }}
+        styles={{ body: { padding: '40px' } }}
       >
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <Title level={2} style={{ color: '#2C3E50', marginBottom: '8px' }}>

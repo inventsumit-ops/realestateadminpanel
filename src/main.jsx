@@ -5,6 +5,7 @@ import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConfigProvider } from 'antd'
 import { store } from './store'
+import { AuthProvider } from './hooks/useAuth.jsx'
 import App from './App.jsx'
 import './assets/styles/theme.css'
 
@@ -71,9 +72,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <ConfigProvider theme={antdTheme}>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <AuthProvider>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <App />
+            </BrowserRouter>
+          </AuthProvider>
         </ConfigProvider>
       </QueryClientProvider>
     </Provider>

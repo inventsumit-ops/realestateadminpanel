@@ -51,10 +51,10 @@ const EditUser = () => {
           phone: userData.phone,
           role: userData.role,
           isActive: userData.isActive,
-          bio: userData.bio,
-          address: userData.address,
-          city: userData.city,
-          country: userData.country,
+          bio: userData.profile?.bio || '',
+          address: userData.profile?.address || '',
+          city: userData.profile?.city || '',
+          country: userData.profile?.country || '',
         })
       } catch (error) {
         console.error('Error fetching user:', error)

@@ -19,6 +19,11 @@ export const adminApi = {
     return response.data
   },
 
+  updateUser: async (id, userData) => {
+    const response = await api.put(`/admin/users/${id}`, userData)
+    return response.data
+  },
+
   deleteUser: async (userId) => {
     const response = await api.delete(`/admin/users/${userId}`)
     return response.data
@@ -63,6 +68,16 @@ export const adminApi = {
 
   verifyAgent: async (agentId) => {
     const response = await api.put(`/admin/agents/${agentId}/verify`)
+    return response.data
+  },
+
+  updateAgent: async (agentId, agentData) => {
+    const response = await api.put(`/admin/agents/${agentId}`, agentData)
+    return response.data
+  },
+
+  deleteAgent: async (agentId) => {
+    const response = await api.delete(`/admin/agents/${agentId}`)
     return response.data
   },
 

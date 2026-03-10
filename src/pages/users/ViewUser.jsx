@@ -192,7 +192,7 @@ const ViewUser = () => {
                   <div>
                     <Text strong>Address</Text>
                     <div style={{ marginTop: 4 }}>
-                      <Text>{user.address || 'Not provided'}</Text>
+                      <Text>{user.profile?.address || 'Not provided'}</Text>
                     </div>
                   </div>
                 </Space>
@@ -203,7 +203,7 @@ const ViewUser = () => {
                   <div>
                     <Text strong>City</Text>
                     <div style={{ marginTop: 4 }}>
-                      <Text>{user.city || 'Not provided'}</Text>
+                      <Text>{user.profile?.city || 'Not provided'}</Text>
                     </div>
                   </div>
                 </Space>
@@ -214,7 +214,7 @@ const ViewUser = () => {
                   <div>
                     <Text strong>Country</Text>
                     <div style={{ marginTop: 4 }}>
-                      <Text>{user.country || 'Not provided'}</Text>
+                      <Text>{user.profile?.country || 'Not provided'}</Text>
                     </div>
                   </div>
                 </Space>

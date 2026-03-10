@@ -169,10 +169,10 @@ const UsersList = () => {
       role: user.role,
       phone: user.phone,
       isActive: user.isActive,
-      bio: user.bio,
-      address: user.address,
-      city: user.city,
-      country: user.country,
+      bio: user.profile?.bio || '',
+      address: user.profile?.address || '',
+      city: user.profile?.city || '',
+      country: user.profile?.country || '',
     })
     setEditModalVisible(true)
   }
@@ -520,12 +520,9 @@ const UsersList = () => {
                   <Form.Item
                     name="role"
                     label="User Role"
-                    rules={[{ required: true, message: 'Please select user role' }]}
                   >
-                    <Select placeholder="Select user role">
+                    <Select placeholder="User role (read-only)" disabled>
                       <Option value="user">User</Option>
-                      <Option value="agent">Agent</Option>
-                      <Option value="admin">Admin</Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -639,7 +636,7 @@ const UsersList = () => {
 
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="User ID">
-                  <Text copyable style={{ fontSize: 12 }}>{selectedUser._id}</Text>
+                  <Typography.Text copyable style={{ fontSize: 12 }}>{selectedUser._id}</Typography.Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Joined">
                   {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'Unknown'}
@@ -662,7 +659,7 @@ const UsersList = () => {
                   {selectedUser.name || 'Not provided'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Email Address" span={2}>
-                  <Text copyable>{selectedUser.email || 'Not provided'}</Text>
+                  <Typography.Text copyable>{selectedUser.email || 'Not provided'}</Typography.Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Phone Number" span={2}>
                   {selectedUser.phone || 'Not provided'}
@@ -679,27 +676,27 @@ const UsersList = () => {
 
               <Descriptions title="Address Information" column={2} size="small" style={{ marginTop: 16 }}>
                 <Descriptions.Item label="Address" span={2}>
-                  {selectedUser.address || 'Not provided'}
+                  {selectedUser.profile?.address || 'Not provided'}
                 </Descriptions.Item>
                 <Descriptions.Item label="City" span={1}>
-                  {selectedUser.city || 'Not provided'}
+                  {selectedUser.profile?.city || 'Not provided'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Country" span={1}>
-                  {selectedUser.country || 'Not provided'}
+                  {selectedUser.profile?.country || 'Not provided'}
                 </Descriptions.Item>
               </Descriptions>
 
-              {selectedUser.bio && (
+              {selectedUser.profile?.bio && (
                 <Descriptions title="Additional Information" column={1} size="small" style={{ marginTop: 16 }}>
                   <Descriptions.Item label="Bio/Description">
-                    {selectedUser.bio}
+                    {selectedUser.profile?.bio}
                   </Descriptions.Item>
                 </Descriptions>
               )}
 
               {selectedUser.profile_image && (
                 <div style={{ marginTop: 16 }}>
-                  <Text strong>Profile Image</Text>
+                  <Typography.Text strong>Profile Image</Typography.Text>
                   <div style={{ marginTop: 8 }}>
                     <Image
                       width={150}
@@ -804,9 +801,9 @@ const UsersList = () => {
                     )}
                   </div>
                 </Upload>
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                   Click to upload profile picture (JPG/PNG, max 2MB)
-                </Text>
+                </Typography.Text>
               </div>
 
               <Form.Item
