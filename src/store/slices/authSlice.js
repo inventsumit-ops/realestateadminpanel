@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { authApi } from '../../services/api/authApi'
+import { setToken, removeToken } from '../../utils/token'
 
 // Async thunks
 export const loginUser = createAsyncThunk(
@@ -7,7 +8,7 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await authApi.login(credentials)
-      localStorage.setItem('token', response.token)
+      setToken(response.token)
       return response
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Login failed')
@@ -48,7 +49,7 @@ export const logoutUser = createAsyncThunk(
       console.error('Logout error:', error)
       return rejectWithValue(error.response?.data?.message || 'Logout failed')
     } finally {
-      localStorage.removeItem('token')
+      removeToken()
     }
   }
 )
@@ -67,7 +68,7 @@ export const updateProfile = createAsyncThunk(
 
 const initialState = {
   user: null,
-  token: localStorage.getItem('token'),
+  token: null,
   isAuthenticated: false,
   loading: false,
   error: null,
@@ -85,10 +86,26 @@ const authSlice = createSlice({
       state.token = null
       state.isAuthenticated = false
       state.error = null
+      removeToken()
+    },
+    setAuthFromPersist: (state, action) => {
+      const { user, token, isAuthenticated } = action.payload
+      state.user = user
+      state.token = token
+      state.isAuthenticated = isAuthenticated
     },
   },
   extraReducers: (builder) => {
     builder
+      // Handle rehydration
+      .addCase('persist/REHYDRATE', (state, action) => {
+        if (action.payload?.auth) {
+          const { user, token, isAuthenticated } = action.payload.auth
+          state.user = user
+          state.token = token
+          state.isAuthenticated = isAuthenticated
+        }
+      })
       // Login
       .addCase(loginUser.pending, (state) => {
         state.loading = true
@@ -131,8 +148,13 @@ const authSlice = createSlice({
       .addCase(getCurrentUser.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
-        state.isAuthenticated = false
-        state.token = null
+        // Clear auth state on 401 errors
+        if (action.error?.message?.includes('401') || action.payload?.includes('401')) {
+          state.user = null
+          state.token = null
+          state.isAuthenticated = false
+          removeToken()
+        }
       })
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {

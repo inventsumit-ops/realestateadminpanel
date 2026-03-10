@@ -4,7 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConfigProvider } from 'antd'
-import { store } from './store'
+import { PersistGate } from 'redux-persist/integration/react'
+import { store, persistor } from './store'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import App from './App.jsx'
 import './assets/styles/theme.css'
@@ -70,15 +71,17 @@ const antdTheme = {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <ConfigProvider theme={antdTheme}>
-          <AuthProvider>
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <App />
-            </BrowserRouter>
-          </AuthProvider>
-        </ConfigProvider>
-      </QueryClientProvider>
+      <PersistGate loading={null} persistor={persistor}>
+        <QueryClientProvider client={queryClient}>
+          <ConfigProvider theme={antdTheme}>
+            <AuthProvider>
+              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <App />
+              </BrowserRouter>
+            </AuthProvider>
+          </ConfigProvider>
+        </QueryClientProvider>
+      </PersistGate>
     </Provider>
   </React.StrictMode>,
 )

@@ -1,4 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
+import { persistStore, persistReducer } from 'redux-persist'
+import storage from 'redux-persist/lib/storage'
 import authSlice from './slices/authSlice'
 import usersSlice from './slices/usersSlice'
 import agentsSlice from './slices/agentsSlice'
@@ -13,9 +15,19 @@ import adsSlice from './slices/adsSlice'
 import reportsSlice from './slices/reportsSlice'
 import settingsSlice from './slices/settingsSlice'
 
+// Persist configuration for auth slice
+const persistConfig = {
+  key: 'auth',
+  storage,
+  whitelist: ['user', 'token', 'isAuthenticated'], // Only persist these auth fields
+}
+
+// Create persisted reducer for auth
+const persistedAuthReducer = persistReducer(persistConfig, authSlice)
+
 export const store = configureStore({
   reducer: {
-    auth: authSlice,
+    auth: persistedAuthReducer,
     users: usersSlice,
     agents: agentsSlice,
     properties: propertiesSlice,
@@ -32,9 +44,11 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE', 'persist/PURGE', 'persist/REGISTER'],
       },
     }),
 })
+
+export const persistor = persistStore(store)
 
 export default store

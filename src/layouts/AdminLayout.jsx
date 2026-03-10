@@ -56,6 +56,7 @@ const AdminLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [createUserModalVisible, setCreateUserModalVisible] = useState(false)
+  const [createAgentModalVisible, setCreateAgentModalVisible] = useState(false)
   const [imageUrl, setImageUrl] = useState(null)
   const [form] = Form.useForm()
   const queryClient = useQueryClient()
@@ -267,6 +268,29 @@ const AdminLayout = () => {
     createUserMutation.mutate(userData)
   }
 
+  // Create agent mutation
+  const createAgentMutation = useMutation({
+    mutationFn: adminApi.createAgent,
+    onSuccess: () => {
+      message.success('Agent created successfully')
+      setCreateAgentModalVisible(false)
+      setImageUrl(null)
+      form.resetFields()
+      queryClient.invalidateQueries(['agents'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to create agent')
+    },
+  })
+
+  const handleCreateAgent = (values) => {
+    const agentData = {
+      ...values,
+      profile_image: imageUrl,
+    }
+    createAgentMutation.mutate(agentData)
+  }
+
   const handleImageChange = (info) => {
     if (info.file.status === 'done') {
       setImageUrl(info.file.response.url)
@@ -304,6 +328,8 @@ const AdminLayout = () => {
   const handleMenuClick = ({ key }) => {
     if (key === '/admin/users/create') {
       setCreateUserModalVisible(true)
+    } else if (key === '/admin/agents/create') {
+      setCreateAgentModalVisible(true)
     } else {
       navigate(key)
     }
@@ -604,6 +630,278 @@ const AdminLayout = () => {
                 <Input.TextArea
                   rows={2}
                   placeholder="Enter user address (optional)"
+                />
+              </Form.Item>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="city"
+                    label="City"
+                  >
+                    <Input placeholder="Enter city (optional)" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="country"
+                    label="Country"
+                  >
+                    <Input placeholder="Enter country (optional)" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Create Agent Modal */}
+      <Modal
+        title="Create New Agent"
+        open={createAgentModalVisible}
+        onCancel={() => {
+          setCreateAgentModalVisible(false)
+          setImageUrl(null)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setCreateAgentModalVisible(false)
+            setImageUrl(null)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={createAgentMutation.isLoading}
+          >
+            Create Agent
+          </Button>
+        ]}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateAgent}
+          initialValues={{
+            is_active: true,
+          }}
+        >
+          <Row gutter={[16, 0]}>
+            {/* Left Column - Profile Image and Basic Info */}
+            <Col xs={24} lg={10}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <Upload {...uploadProps}>
+                  <div
+                    style={{
+                      width: 120,
+                      height: 120,
+                      border: '2px dashed #d9d9d9',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      margin: '0 auto',
+                      overflow: 'hidden',
+                      background: imageUrl ? `url(${imageUrl}) center/cover` : '#fafafa'
+                    }}
+                  >
+                    {imageUrl ? (
+                      <img src={imageUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center' }}>
+                        <UserOutlined style={{ fontSize: 36, color: '#d9d9d9' }} />
+                        <div style={{ marginTop: 4, fontSize: 10, color: '#666' }}>Upload Photo</div>
+                      </div>
+                    )}
+                  </div>
+                </Upload>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                  Click to upload profile picture (JPG/PNG, max 2MB)
+                </div>
+              </div>
+
+              <Form.Item
+                name="name"
+                label="Full Name"
+                rules={[
+                  { required: true, message: 'Please enter agent\'s full name' },
+                  { max: 100, message: 'Name cannot exceed 100 characters' },
+                ]}
+              >
+                <Input 
+                  prefix={<UserOutlined />} 
+                  placeholder="Enter full name"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="email"
+                label="Email Address"
+                rules={[
+                  { required: true, message: 'Please enter email address' },
+                  { type: 'email', message: 'Please enter a valid email' },
+                ]}
+              >
+                <Input 
+                  prefix={<MailOutlined />} 
+                  placeholder="Enter email address"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="phone"
+                label="Phone Number"
+                rules={[
+                  { required: true, message: 'Please enter phone number' },
+                  { pattern: /^[+]?[\d\s-()]+$/, message: 'Please enter a valid phone number' },
+                ]}
+              >
+                <Input 
+                  prefix={<PhoneOutlined />} 
+                  placeholder="Enter phone number"
+                />
+              </Form.Item>
+            </Col>
+
+            {/* Right Column - Account Details */}
+            <Col xs={24} lg={14}>
+              <Divider orientation="left">Account Details</Divider>
+
+              <Form.Item
+                name="password"
+                label="Password"
+                rules={[
+                  { required: true, message: 'Please enter password' },
+                  { min: 6, message: 'Password must be at least 6 characters' },
+                ]}
+              >
+                <Input.Password 
+                  prefix={<LockOutlined />} 
+                  placeholder="Enter password"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="confirmPassword"
+                label="Confirm Password"
+                dependencies={['password']}
+                rules={[
+                  { required: true, message: 'Please confirm password' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) {
+                        return Promise.resolve()
+                      }
+                      return Promise.reject(new Error('Passwords do not match'))
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password 
+                  prefix={<LockOutlined />} 
+                  placeholder="Confirm password"
+                />
+              </Form.Item>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="agency_name"
+                    label="Agency Name"
+                  >
+                    <Input placeholder="Enter agency name (optional)" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="license_number"
+                    label="License Number"
+                  >
+                    <Input placeholder="Enter license number (optional)" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="specialization"
+                    label="Specialization"
+                  >
+                    <Select placeholder="Select specialization (optional)">
+                      <Option value="residential">Residential</Option>
+                      <Option value="commercial">Commercial</Option>
+                      <Option value="luxury">Luxury</Option>
+                      <Option value="rental">Rental</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="experience_years"
+                    label="Experience (Years)"
+                  >
+                    <Input 
+                      type="number" 
+                      placeholder="Enter years of experience"
+                      min={0}
+                      max={50}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="is_active"
+                    label="Account Status"
+                    rules={[{ required: true, message: 'Please select account status' }]}
+                  >
+                    <Select placeholder="Select account status">
+                      <Option value={true}>Active</Option>
+                      <Option value={false}>Inactive</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  {/* Empty column for balance */}
+                </Col>
+              </Row>
+
+              <Divider orientation="left">Additional Information</Divider>
+
+              <Form.Item
+                name="bio"
+                label="Bio/Description"
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Enter agent bio or description (optional)"
+                  maxLength={500}
+                  showCount
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="address"
+                label="Address"
+              >
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Enter agent address (optional)"
                 />
               </Form.Item>
 
