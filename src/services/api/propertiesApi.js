@@ -2,46 +2,46 @@ import { adminApi } from './adminApi'
 
 export const propertiesApi = {
   getProperties: async (params = {}) => {
-    const response = await adminApi.get('/admin/properties', { params })
+    const response = await adminApi.get('/properties', { params })
     return response.data
   },
 
   getPropertyById: async (id) => {
-    const response = await adminApi.get(`/admin/properties/${id}`)
+    const response = await adminApi.get(`/properties/${id}`)
     return response.data
   },
 
   createProperty: async (propertyData) => {
-    const response = await adminApi.post('/admin/properties', propertyData)
+    const response = await adminApi.post('/properties', propertyData)
     return response.data
   },
 
   updateProperty: async (id, propertyData) => {
-    const response = await adminApi.put(`/admin/properties/${id}`, propertyData)
+    const response = await adminApi.put(`/properties/${id}`, propertyData)
     return response.data
   },
 
   deleteProperty: async (id) => {
-    await adminApi.delete(`/admin/properties/${id}`)
+    await adminApi.delete(`/properties/${id}`)
   },
 
   getPendingProperties: async (params = {}) => {
-    const response = await adminApi.get('/admin/properties/pending', { params })
+    const response = await adminApi.get('/properties/pending', { params })
     return response.data
   },
 
   approveProperty: async (id) => {
-    const response = await adminApi.patch(`/admin/properties/${id}/approve`)
+    const response = await adminApi.patch(`/properties/${id}/approve`)
     return response.data
   },
 
   rejectProperty: async (id, reason) => {
-    const response = await adminApi.patch(`/admin/properties/${id}/reject`, { reason })
+    const response = await adminApi.patch(`/properties/${id}/reject`, { reason })
     return response.data
   },
 
   togglePropertyStatus: async (id) => {
-    const response = await adminApi.patch(`/admin/properties/${id}/toggle-status`)
+    const response = await adminApi.patch(`/properties/${id}/toggle-status`)
     return response.data
   },
 }

@@ -221,7 +221,7 @@ export const adminApi = {
 
   // Generic methods for custom endpoints
   get: async (endpoint, params) => {
-    const response = await api.get(`/admin${endpoint}`, { params })
+    const response = await api.get(`/admin${endpoint}`, params)
     return response.data
   },
 

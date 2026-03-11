@@ -118,11 +118,11 @@ const Dashboard = () => {
 
   // Get stats from Redux store
   const stats = {
-    totalUsers: users.pagination.total || 0,
-    totalAgents: agents.pagination.total || 0,
-    totalProperties: properties.pagination.total || 0,
-    totalInquiries: inquiries.pagination.total || 0,
-    totalAppointments: appointments.pagination.total || 0,
+    totalUsers: users.pagination?.total || 0,
+    totalAgents: agents.pagination?.total || 0,
+    totalProperties: properties.pagination?.total || 0,
+    totalInquiries: inquiries.pagination?.total || 0,
+    totalAppointments: appointments.pagination?.total || 0,
   }
 
   // Get recent data from Redux store
