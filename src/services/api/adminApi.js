@@ -40,6 +40,11 @@ export const adminApi = {
     return response.data
   },
 
+  updateProperty: async (id, propertyData) => {
+    const response = await api.put(`/admin/properties/${id}`, propertyData)
+    return response.data
+  },
+
   approveProperty: async (propertyId) => {
     const response = await api.put(`/admin/properties/${propertyId}/approve`)
     return response.data
