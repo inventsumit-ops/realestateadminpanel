@@ -49,6 +49,7 @@ import AgentReviews from './pages/reviews/AgentReviews'
 import BlogsList from './pages/blogs/BlogsList'
 import CreateBlog from './pages/blogs/CreateBlog'
 import EditBlog from './pages/blogs/EditBlog'
+import BlogCategoriesList from './pages/blogCategories/BlogCategoriesList'
 
 import AdsList from './pages/ads/AdsList'
 import CreateAd from './pages/ads/CreateAd'
@@ -127,6 +128,9 @@ function App() {
         <Route path="blogs" element={<BlogsList />} />
         <Route path="blogs/create" element={<CreateBlog />} />
         <Route path="blogs/edit/:id" element={<EditBlog />} />
+        
+        {/* Blog Categories Routes */}
+        <Route path="blog-categories" element={<BlogCategoriesList />} />
         
         {/* Ads Routes */}
         <Route path="ads" element={<AdsList />} />

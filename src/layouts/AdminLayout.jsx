@@ -59,6 +59,7 @@ const AdminLayout = () => {
   const [createUserModalVisible, setCreateUserModalVisible] = useState(false)
   const [createAgentModalVisible, setCreateAgentModalVisible] = useState(false)
   const [createPropertyModalVisible, setCreatePropertyModalVisible] = useState(false)
+  const [createBlogModalVisible, setCreateBlogModalVisible] = useState(false)
   const [imageUrl, setImageUrl] = useState(null)
   const [propertyImages, setPropertyImages] = useState([])
   const [form] = Form.useForm()
@@ -82,16 +83,31 @@ const AdminLayout = () => {
     queryFn: () => amenitiesApi.getAmenities({ limit: 100, is_active: true }), // Get only active amenities
   })
 
+  // Fetch blog categories for dropdown
+  const {
+    data: blogCategoriesData,
+    isLoading: blogCategoriesLoading,
+  } = useQuery({
+    queryKey: ['blogCategories'],
+    queryFn: () => adminApi.getBlogCategories({ limit: 100, is_active: true }), // Get only active categories
+  })
+
   // Listen for custom events to open modals from child components
   React.useEffect(() => {
     const handleOpenCreatePropertyModal = () => {
       setCreatePropertyModalVisible(true)
     }
 
+    const handleOpenCreateBlogModal = () => {
+      setCreateBlogModalVisible(true)
+    }
+
     window.addEventListener('openCreatePropertyModal', handleOpenCreatePropertyModal)
+    window.addEventListener('openCreateBlogModal', handleOpenCreateBlogModal)
     
     return () => {
       window.removeEventListener('openCreatePropertyModal', handleOpenCreatePropertyModal)
+      window.removeEventListener('openCreateBlogModal', handleOpenCreateBlogModal)
     }
   }, [])
 
@@ -214,6 +230,10 @@ const AdminLayout = () => {
           key: '/admin/blogs/create',
           label: 'Create Blog',
         },
+        {
+          key: '/admin/blog-categories',
+          label: 'Blog Categories',
+        },
       ],
     },
     {
@@ -328,6 +348,20 @@ const AdminLayout = () => {
     },
   })
 
+  // Create blog mutation
+  const createBlogMutation = useMutation({
+    mutationFn: adminApi.createBlog,
+    onSuccess: () => {
+      message.success('Blog created successfully')
+      setCreateBlogModalVisible(false)
+      form.resetFields()
+      queryClient.invalidateQueries(['blogs'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to create blog')
+    },
+  })
+
   const handleCreateAgent = (values) => {
     const agentData = {
       ...values,
@@ -342,6 +376,14 @@ const AdminLayout = () => {
       images: propertyImages,
     }
     createPropertyMutation.mutate(propertyData)
+  }
+
+  const handleCreateBlog = (values) => {
+    const blogData = {
+      ...values,
+      author: 'Admin', // Set default author for admin-created blogs
+    }
+    createBlogMutation.mutate(blogData)
   }
 
   const handleImageChange = (info) => {
@@ -410,6 +452,8 @@ const AdminLayout = () => {
       setCreateAgentModalVisible(true)
     } else if (key === '/admin/properties/create') {
       setCreatePropertyModalVisible(true)
+    } else if (key === '/admin/blogs/create') {
+      setCreateBlogModalVisible(true)
     } else {
       navigate(key)
     }
@@ -1384,6 +1428,162 @@ const AdminLayout = () => {
                   <Option value={true}>Approved</Option>
                   <Option value={false}>Pending Approval</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Create Blog Modal */}
+      <Modal
+        title="Create New Blog Post"
+        open={createBlogModalVisible}
+        onCancel={() => {
+          setCreateBlogModalVisible(false)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setCreateBlogModalVisible(false)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={createBlogMutation.isLoading}
+          >
+            Create Blog Post
+          </Button>
+        ]}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateBlog}
+          initialValues={{
+            status: 'draft',
+          }}
+        >
+          <Row gutter={[16, 0]}>
+            <Col xs={24}>
+              <Form.Item
+                name="title"
+                label="Blog Title"
+                rules={[
+                  { required: true, message: 'Please enter blog title' },
+                  { max: 200, message: 'Title cannot exceed 200 characters' },
+                ]}
+              >
+                <Input placeholder="Enter blog title" />
+              </Form.Item>
+
+              <Form.Item
+                name="slug"
+                label="URL Slug"
+                rules={[
+                  { required: true, message: 'Please enter URL slug' },
+                  { pattern: /^[a-z0-9-]+$/, message: 'Slug can only contain lowercase letters, numbers, and hyphens' },
+                ]}
+              >
+                <Input placeholder="enter-blog-slug" />
+              </Form.Item>
+
+              <Form.Item
+                name="excerpt"
+                label="Excerpt"
+                rules={[
+                  { required: true, message: 'Please enter blog excerpt' },
+                  { max: 500, message: 'Excerpt cannot exceed 500 characters' },
+                ]}
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Enter a brief summary of the blog post"
+                  showCount
+                  maxLength={500}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="content"
+                label="Content"
+                rules={[
+                  { required: true, message: 'Please enter blog content' },
+                ]}
+              >
+                <Input.TextArea
+                  rows={8}
+                  placeholder="Enter the full blog content"
+                />
+              </Form.Item>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="category_id"
+                    label="Category"
+                    rules={[{ required: true, message: 'Please select a category' }]}
+                  >
+                    <Select placeholder="Select category" loading={blogCategoriesLoading}>
+                      {blogCategoriesData?.data?.map(category => (
+                        <Option key={category._id} value={category._id}>
+                          {category.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="status"
+                    label="Status"
+                    rules={[{ required: true, message: 'Please select status' }]}
+                  >
+                    <Select placeholder="Select status">
+                      <Option value="draft">Draft</Option>
+                      <Option value="published">Published</Option>
+                      <Option value="archived">Archived</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="featured_image"
+                label="Featured Image URL"
+              >
+                <Input placeholder="Enter featured image URL (optional)" />
+              </Form.Item>
+
+              <Divider orientation="left">SEO Settings</Divider>
+
+              <Form.Item
+                name="meta_title"
+                label="Meta Title"
+              >
+                <Input 
+                  placeholder="Enter meta title for SEO (optional)"
+                  maxLength={60}
+                  showCount
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="meta_description"
+                label="Meta Description"
+              >
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Enter meta description for SEO (optional)"
+                  maxLength={160}
+                  showCount
+                />
               </Form.Item>
             </Col>
           </Row>

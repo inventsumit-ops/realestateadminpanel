@@ -15,6 +15,10 @@ import {
   Tooltip,
   Modal,
   Switch,
+  Form,
+  Row,
+  Col,
+  Divider,
 } from 'antd'
 import {
   FileTextOutlined,
@@ -42,8 +46,19 @@ const BlogsList = () => {
   const [pageSize, setPageSize] = useState(10)
   const [selectedBlog, setSelectedBlog] = useState(null)
   const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [form] = Form.useForm()
 
   const queryClient = useQueryClient()
+
+  // Fetch blog categories for dropdown
+  const {
+    data: blogCategoriesData,
+    isLoading: blogCategoriesLoading,
+  } = useQuery({
+    queryKey: ['blogCategories'],
+    queryFn: () => adminApi.getBlogCategories({ limit: 100, is_active: true }), // Get only active categories
+  })
 
   // Fetch blogs data
   const {
@@ -66,6 +81,8 @@ const BlogsList = () => {
     mutationFn: ({ id, data }) => adminApi.updateBlog(id, data),
     onSuccess: () => {
       message.success('Blog updated successfully')
+      setEditModalVisible(false)
+      form.resetFields()
       queryClient.invalidateQueries(['blogs'])
     },
     onError: (error) => {
@@ -88,6 +105,30 @@ const BlogsList = () => {
   const handleViewBlog = (blog) => {
     setSelectedBlog(blog)
     setDetailModalVisible(true)
+  }
+
+  const handleEditBlog = (blog) => {
+    setSelectedBlog(blog)
+    form.setFieldsValue({
+      title: blog.title,
+      slug: blog.slug,
+      excerpt: blog.excerpt,
+      content: blog.content,
+      category_id: blog.category_id?._id || blog.category_id,
+      status: blog.status,
+      featured_image: blog.featured_image,
+      meta_title: blog.meta_title,
+      meta_description: blog.meta_description,
+    })
+    setEditModalVisible(true)
+  }
+
+  const handleEditSubmit = (values) => {
+    const blogData = {
+      ...values,
+      author: selectedBlog.author, // Preserve original author
+    }
+    updateBlogMutation.mutate({ id: selectedBlog._id, data: blogData })
   }
 
   const handleStatusToggle = (blogId, currentStatus) => {
@@ -213,6 +254,14 @@ const BlogsList = () => {
               onClick={() => handleViewBlog(record)}
             />
           </Tooltip>
+          <Tooltip title="Edit Blog">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => handleEditBlog(record)}
+            />
+          </Tooltip>
           <Tooltip title={record.status === 'published' ? 'Unpublish' : 'Publish'}>
             <Button
               type="text"
@@ -270,7 +319,11 @@ const BlogsList = () => {
     <div>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2} style={{ margin: 0 }}>Blog Management</Title>
-        <Button type="primary" icon={<PlusOutlined />}>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => window.dispatchEvent(new CustomEvent('openCreateBlogModal'))}
+        >
           Create Blog Post
         </Button>
       </div>
@@ -440,6 +493,159 @@ const BlogsList = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Edit Blog Modal */}
+      <Modal
+        title="Edit Blog Post"
+        open={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setEditModalVisible(false)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={updateBlogMutation.isLoading}
+          >
+            Update Blog Post
+          </Button>
+        ]}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleEditSubmit}
+        >
+          <Row gutter={[16, 0]}>
+            <Col xs={24}>
+              <Form.Item
+                name="title"
+                label="Blog Title"
+                rules={[
+                  { required: true, message: 'Please enter blog title' },
+                  { max: 200, message: 'Title cannot exceed 200 characters' },
+                ]}
+              >
+                <Input placeholder="Enter blog title" />
+              </Form.Item>
+
+              <Form.Item
+                name="slug"
+                label="URL Slug"
+                rules={[
+                  { required: true, message: 'Please enter URL slug' },
+                  { pattern: /^[a-z0-9-]+$/, message: 'Slug can only contain lowercase letters, numbers, and hyphens' },
+                ]}
+              >
+                <Input placeholder="enter-blog-slug" />
+              </Form.Item>
+
+              <Form.Item
+                name="excerpt"
+                label="Excerpt"
+                rules={[
+                  { required: true, message: 'Please enter blog excerpt' },
+                  { max: 500, message: 'Excerpt cannot exceed 500 characters' },
+                ]}
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Enter a brief summary of blog post"
+                  showCount
+                  maxLength={500}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="content"
+                label="Content"
+                rules={[
+                  { required: true, message: 'Please enter blog content' },
+                ]}
+              >
+                <Input.TextArea
+                  rows={8}
+                  placeholder="Enter full blog content"
+                />
+              </Form.Item>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="category_id"
+                    label="Category"
+                    rules={[{ required: true, message: 'Please select a category' }]}
+                  >
+                    <Select placeholder="Select category" loading={blogCategoriesLoading}>
+                      {blogCategoriesData?.data?.map(category => (
+                        <Option key={category._id} value={category._id}>
+                          {category.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="status"
+                    label="Status"
+                    rules={[{ required: true, message: 'Please select status' }]}
+                  >
+                    <Select placeholder="Select status">
+                      <Option value="draft">Draft</Option>
+                      <Option value="published">Published</Option>
+                      <Option value="archived">Archived</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="featured_image"
+                label="Featured Image URL"
+              >
+                <Input placeholder="Enter featured image URL (optional)" />
+              </Form.Item>
+
+              <Divider orientation="left">SEO Settings</Divider>
+
+              <Form.Item
+                name="meta_title"
+                label="Meta Title"
+              >
+                <Input 
+                  placeholder="Enter meta title for SEO (optional)"
+                  maxLength={60}
+                  showCount
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="meta_description"
+                label="Meta Description"
+              >
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Enter meta description for SEO (optional)"
+                  maxLength={160}
+                  showCount
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
       </Modal>
     </div>
   )

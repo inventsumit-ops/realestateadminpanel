@@ -187,6 +187,27 @@ export const adminApi = {
     return response.data
   },
 
+  // Blog Categories Management
+  getBlogCategories: async (params = {}) => {
+    const response = await api.get('/admin/blog-categories', { params })
+    return response.data
+  },
+
+  createBlogCategory: async (categoryData) => {
+    const response = await api.post('/admin/blog-categories', categoryData)
+    return response.data
+  },
+
+  updateBlogCategory: async (categoryId, categoryData) => {
+    const response = await api.put(`/admin/blog-categories/${categoryId}`, categoryData)
+    return response.data
+  },
+
+  deleteBlogCategory: async (categoryId) => {
+    const response = await api.delete(`/admin/blog-categories/${categoryId}`)
+    return response.data
+  },
+
   // Settings
   getSettings: async () => {
     const response = await api.get('/admin/settings')
