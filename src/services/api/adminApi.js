@@ -192,6 +192,27 @@ export const adminApi = {
     const response = await api.put('/admin/settings', { settings })
     return response.data
   },
+
+  // Generic methods for custom endpoints
+  get: async (endpoint, params) => {
+    const response = await api.get(`/admin${endpoint}`, { params })
+    return response.data
+  },
+
+  post: async (endpoint, data) => {
+    const response = await api.post(`/admin${endpoint}`, data)
+    return response.data
+  },
+
+  put: async (endpoint, data) => {
+    const response = await api.put(`/admin${endpoint}`, data)
+    return response.data
+  },
+
+  delete: async (endpoint) => {
+    const response = await api.delete(`/admin${endpoint}`)
+    return response.data
+  },
 }
 
 export default adminApi

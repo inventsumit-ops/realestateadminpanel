@@ -12,12 +12,35 @@ export const amenitiesApi = {
   },
 
   createAmenity: async (amenityData) => {
-    const response = await adminApi.post('/amenities', amenityData)
+    // Transform frontend field names to backend field names
+    const transformedData = {
+      ...amenityData,
+      is_active: amenityData.isActive !== false, // Convert isActive to is_active
+      // Remove isActive from the data as backend doesn't expect it
+      isActive: undefined
+    }
+    // Remove undefined fields
+    Object.keys(transformedData).forEach(key => transformedData[key] === undefined && delete transformedData[key])
+    
+    console.log('🔄 API Call - Transformed data:', transformedData)
+    
+    const response = await adminApi.post('/amenities', transformedData)
+    console.log('✅ API Response:', response.data)
     return response.data
   },
 
   updateAmenity: async (id, amenityData) => {
-    const response = await adminApi.put(`/amenities/${id}`, amenityData)
+    // Transform frontend field names to backend field names
+    const transformedData = {
+      ...amenityData,
+      is_active: amenityData.isActive !== false, // Convert isActive to is_active
+      // Remove isActive from the data as backend doesn't expect it
+      isActive: undefined
+    }
+    // Remove undefined fields
+    Object.keys(transformedData).forEach(key => transformedData[key] === undefined && delete transformedData[key])
+    
+    const response = await adminApi.put(`/amenities/${id}`, transformedData)
     return response.data
   },
 
