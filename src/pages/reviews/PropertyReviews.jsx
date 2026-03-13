@@ -402,7 +402,7 @@ const PropertyReviews = () => {
         {/* Reviews Table */}
         <Table
           columns={columns}
-          dataSource={reviewsData?.data || []}
+          dataSource={reviewsData || []}
           loading={isLoading}
           pagination={{
             current: currentPage,
@@ -457,7 +457,7 @@ const PropertyReviews = () => {
             rules={[{ required: true, message: 'Please select a user' }]}
           >
             <Select placeholder="Select user">
-              {usersData?.data?.map(user => (
+              {usersData?.map(user => (
                 <Option key={user._id} value={user._id}>
                   {user.name} - {user.email}
                 </Option>
@@ -471,7 +471,7 @@ const PropertyReviews = () => {
             rules={[{ required: true, message: 'Please select a property' }]}
           >
             <Select placeholder="Select property">
-              {propertiesData?.data?.map(property => (
+              {propertiesData?.map(property => (
                 <Option key={property._id} value={property._id}>
                   {property.title} - {property.location?.city}
                 </Option>
