@@ -19,6 +19,11 @@ import {
   message,
   Input,
   Select,
+  DatePicker,
+  Switch,
+  Descriptions,
+  Image,
+  InputNumber,
 } from 'antd'
 import {
   DashboardOutlined,
@@ -42,6 +47,7 @@ import {
   PhoneOutlined,
   LockOutlined,
   UploadOutlined,
+  DollarCircleOutlined,
 } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../services/api/adminApi'
@@ -50,7 +56,9 @@ import Header from './Header'
 
 const { Content, Sider } = Layout
 const { Title } = Typography
+const { Search } = Input
 const { Option } = Select
+const { RangePicker } = DatePicker
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
@@ -60,7 +68,9 @@ const AdminLayout = () => {
   const [createAgentModalVisible, setCreateAgentModalVisible] = useState(false)
   const [createPropertyModalVisible, setCreatePropertyModalVisible] = useState(false)
   const [createBlogModalVisible, setCreateBlogModalVisible] = useState(false)
+  const [createAdModalVisible, setCreateAdModalVisible] = useState(false)
   const [imageUrl, setImageUrl] = useState(null)
+  const [adImageUrl, setAdImageUrl] = useState(null)
   const [propertyImages, setPropertyImages] = useState([])
   const [form] = Form.useForm()
   const queryClient = useQueryClient()
@@ -362,6 +372,21 @@ const AdminLayout = () => {
     },
   })
 
+  // Create ad mutation
+  const createAdMutation = useMutation({
+    mutationFn: adminApi.createAdvertisement,
+    onSuccess: () => {
+      message.success('Advertisement created successfully')
+      setCreateAdModalVisible(false)
+      setAdImageUrl(null)
+      form.resetFields()
+      queryClient.invalidateQueries(['advertisements'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to create advertisement')
+    },
+  })
+
   const handleCreateAgent = (values) => {
     const agentData = {
       ...values,
@@ -386,6 +411,27 @@ const AdminLayout = () => {
     createBlogMutation.mutate(blogData)
   }
 
+  const handleCreateAd = (values) => {
+    const adData = {
+      advertiser_name: values.advertiser_name,
+      advertiser_email: values.advertiser_email,
+      title: values.title,
+      description: values.description,
+      link: values.target_url,
+      image: adImageUrl || 'https://via.placeholder.com/300x200?text=Ad+Image', // Default placeholder
+      image_key: adImageUrl?.split('/').pop() || 'placeholder-image.jpg', // Default key
+      cost: values.cost,
+      ad_type: values.ad_type,
+      position: values.position,
+      status: values.status ? 'active' : 'inactive',
+      start_date: values.dateRange?.[0]?.toISOString(),
+      end_date: values.dateRange?.[1]?.toISOString(),
+    }
+    delete adData.dateRange
+    delete adData.target_url
+    createAdMutation.mutate(adData)
+  }
+
   const handleImageChange = (info) => {
     if (info.file.status === 'done') {
       setImageUrl(info.file.response.url)
@@ -401,6 +447,15 @@ const AdminLayout = () => {
       message.success('Property image uploaded successfully')
     } else if (info.file.status === 'error') {
       message.error('Failed to upload property image')
+    }
+  }
+
+  const handleAdImageChange = (info) => {
+    if (info.file.status === 'done') {
+      setAdImageUrl(info.file.response.url)
+      message.success('Ad image uploaded successfully')
+    } else if (info.file.status === 'error') {
+      message.error('Failed to upload ad image')
     }
   }
 
@@ -445,6 +500,17 @@ const AdminLayout = () => {
     multiple: true,
   }
 
+  const adImageUploadProps = {
+    name: 'ad_image',
+    action: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload/image`,
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+    beforeUpload,
+    onChange: handleAdImageChange,
+    showUploadList: false,
+  }
+
   const handleMenuClick = ({ key }) => {
     if (key === '/admin/users/create') {
       setCreateUserModalVisible(true)
@@ -454,6 +520,8 @@ const AdminLayout = () => {
       setCreatePropertyModalVisible(true)
     } else if (key === '/admin/blogs/create') {
       setCreateBlogModalVisible(true)
+    } else if (key === '/admin/ads/create') {
+      setCreateAdModalVisible(true)
     } else {
       navigate(key)
     }
@@ -1584,6 +1652,230 @@ const AdminLayout = () => {
                   maxLength={160}
                   showCount
                 />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Create Advertisement Modal */}
+      <Modal
+        title="Create New Advertisement"
+        open={createAdModalVisible}
+        onCancel={() => {
+          setCreateAdModalVisible(false)
+          setAdImageUrl(null)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setCreateAdModalVisible(false)
+            setAdImageUrl(null)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={createAdMutation.isLoading}
+          >
+            Create Advertisement
+          </Button>
+        ]}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateAd}
+          initialValues={{
+            status: true,
+            ad_type: 'banner',
+            position: 'header',
+          }}
+        >
+          <Row gutter={[16, 0]}>
+            {/* Left Column - Image and Basic Info */}
+            <Col xs={24} lg={10}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <Upload {...adImageUploadProps}>
+                  <div
+                    style={{
+                      width: 120,
+                      height: 120,
+                      border: '2px dashed #d9d9d9',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      margin: '0 auto',
+                      overflow: 'hidden',
+                      background: adImageUrl ? `url(${adImageUrl}) center/cover` : '#fafafa'
+                    }}
+                  >
+                    {adImageUrl ? (
+                      <img src={adImageUrl} alt="Ad" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center' }}>
+                        <DollarCircleOutlined style={{ fontSize: 36, color: '#d9d9d9' }} />
+                        <div style={{ marginTop: 4, fontSize: 10, color: '#666' }}>Upload Ad Image</div>
+                      </div>
+                    )}
+                  </div>
+                </Upload>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                  Click to upload ad image (JPG/PNG, max 2MB)
+                </div>
+              </div>
+
+              <Form.Item
+                name="title"
+                label="Advertisement Title"
+                rules={[
+                  { required: true, message: 'Please enter advertisement title' },
+                  { max: 100, message: 'Title cannot exceed 100 characters' },
+                ]}
+              >
+                <Input 
+                  prefix={<DollarCircleOutlined />} 
+                  placeholder="Enter advertisement title"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="advertiser_name"
+                label="Advertiser Name"
+                rules={[
+                  { required: true, message: 'Please enter advertiser name' },
+                  { max: 100, message: 'Name cannot exceed 100 characters' },
+                ]}
+              >
+                <Input 
+                  prefix={<UserOutlined />} 
+                  placeholder="Enter advertiser name"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="advertiser_email"
+                label="Advertiser Email"
+                rules={[
+                  { required: true, message: 'Please enter advertiser email' },
+                  { type: 'email', message: 'Please enter a valid email' },
+                ]}
+              >
+                <Input 
+                  prefix={<MailOutlined />} 
+                  placeholder="Enter advertiser email"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="cost"
+                label="Cost ($)"
+                rules={[
+                  { required: true, message: 'Please enter advertisement cost' },
+                  { type: 'number', min: 0, message: 'Cost must be a positive number' },
+                ]}
+              >
+                <InputNumber 
+                  prefix={<DollarCircleOutlined />} 
+                  placeholder="Enter advertisement cost"
+                  min={0}
+                  step={0.01}
+                  style={{ width: '100%' }}
+                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                />
+              </Form.Item>
+            </Col>
+
+            {/* Right Column - Advertisement Details */}
+            <Col xs={24} lg={14}>
+              <Divider orientation="left">Advertisement Details</Divider>
+
+              <Row gutter={[8, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="ad_type"
+                    label="Advertisement Type"
+                    rules={[{ required: true, message: 'Please select advertisement type' }]}
+                  >
+                    <Select placeholder="Select advertisement type">
+                      <Option value="banner">Banner</Option>
+                      <Option value="sidebar">Sidebar</Option>
+                      <Option value="popup">Popup</Option>
+                      <Option value="featured_agent">Featured Agent</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="position"
+                    label="Position"
+                    rules={[{ required: true, message: 'Please select position' }]}
+                  >
+                    <Select placeholder="Select position">
+                      <Option value="home_top">Home Top</Option>
+                      <Option value="home_middle">Home Middle</Option>
+                      <Option value="home_bottom">Home Bottom</Option>
+                      <Option value="search_sidebar">Search Sidebar</Option>
+                      <Option value="property_detail">Property Detail</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="description"
+                label="Description"
+              >
+                <Input.TextArea
+                  rows={4}
+                  placeholder="Enter advertisement description (optional)"
+                  maxLength={500}
+                  showCount
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="target_url"
+                label="Advertisement Link"
+                rules={[
+                  { required: true, message: 'Please enter advertisement link' },
+                  { type: 'url', message: 'Please enter a valid URL' },
+                ]}
+              >
+                <Input 
+                  placeholder="Enter advertisement link"
+                />
+              </Form.Item>
+
+              <Divider orientation="left">Schedule & Status</Divider>
+
+              <Form.Item
+                name="dateRange"
+                label="Advertisement Duration"
+                rules={[{ required: true, message: 'Please select advertisement duration' }]}
+              >
+                <RangePicker 
+                  style={{ width: '100%' }}
+                  placeholder={['Start Date', 'End Date']}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="status"
+                label="Status"
+                rules={[{ required: true, message: 'Please select status' }]}
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
               </Form.Item>
             </Col>
           </Row>
