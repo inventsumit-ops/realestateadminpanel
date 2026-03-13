@@ -15,6 +15,10 @@ import {
   Tooltip,
   Modal,
   Form,
+  Descriptions,
+  Row,
+  Col,
+  Divider,
 } from 'antd'
 import {
   MessageOutlined,
@@ -27,6 +31,8 @@ import {
   CloseOutlined,
   UserOutlined,
   HomeOutlined,
+  MailOutlined,
+  PhoneOutlined,
 } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../../services/api/adminApi'
@@ -43,8 +49,38 @@ const InquiriesList = () => {
   const [pageSize, setPageSize] = useState(10)
   const [selectedInquiry, setSelectedInquiry] = useState(null)
   const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [form] = Form.useForm()
 
   const queryClient = useQueryClient()
+
+  // Fetch users data for dropdowns
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+  } = useQuery({
+    queryKey: ['users-dropdown'],
+    queryFn: () => adminApi.getUsers({
+      page: 1,
+      limit: 1000, // Get all users for dropdown
+      role: 'user', // Only get regular users
+    }),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
+
+  // Fetch properties data for dropdowns
+  const {
+    data: propertiesData,
+    isLoading: propertiesLoading,
+  } = useQuery({
+    queryKey: ['properties-dropdown'],
+    queryFn: () => adminApi.getProperties({
+      page: 1,
+      limit: 1000, // Get all properties for dropdown
+    }),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
 
   // Fetch inquiries data
   const {
@@ -86,6 +122,34 @@ const InquiriesList = () => {
     },
   })
 
+  // Create inquiry mutation
+  const createInquiryMutation = useMutation({
+    mutationFn: adminApi.createInquiry,
+    onSuccess: () => {
+      message.success('Inquiry created successfully')
+      setCreateModalVisible(false)
+      form.resetFields()
+      queryClient.invalidateQueries(['inquiries'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to create inquiry')
+    },
+  })
+
+  // Update inquiry mutation
+  const updateInquiryMutation = useMutation({
+    mutationFn: ({ id, data }) => adminApi.updateInquiry(id, data),
+    onSuccess: () => {
+      message.success('Inquiry updated successfully')
+      setEditModalVisible(false)
+      form.resetFields()
+      queryClient.invalidateQueries(['inquiries'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to update inquiry')
+    },
+  })
+
   const handleViewInquiry = (inquiry) => {
     setSelectedInquiry(inquiry)
     setDetailModalVisible(true)
@@ -97,6 +161,26 @@ const InquiriesList = () => {
 
   const handleDeleteInquiry = (inquiryId) => {
     deleteInquiryMutation.mutate(inquiryId)
+  }
+
+  const handleCreateInquiry = (values) => {
+    createInquiryMutation.mutate(values)
+  }
+
+  const handleEditInquiry = (inquiry) => {
+    setSelectedInquiry(inquiry)
+    form.setFieldsValue({
+      user_id: inquiry.user_id?._id,
+      property_id: inquiry.property_id?._id,
+      message: inquiry.message,
+      status: inquiry.status,
+      priority: inquiry.priority,
+    })
+    setEditModalVisible(true)
+  }
+
+  const handleUpdateInquiry = (values) => {
+    updateInquiryMutation.mutate({ id: selectedInquiry._id, data: values })
   }
 
   const columns = [
@@ -154,10 +238,8 @@ const InquiriesList = () => {
       key: 'status',
       render: (status) => {
         const colorMap = {
-          new: 'red',
           pending: 'orange',
           responded: 'blue',
-          resolved: 'green',
           closed: 'default',
         }
         return (
@@ -203,13 +285,21 @@ const InquiriesList = () => {
               onClick={() => handleViewInquiry(record)}
             />
           </Tooltip>
-          {record.status !== 'resolved' && (
+          <Tooltip title="Edit Inquiry">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => handleEditInquiry(record)}
+            />
+          </Tooltip>
+          {record.status !== 'closed' && (
             <Tooltip title="Mark as Resolved">
               <Button
                 type="text"
                 size="small"
                 icon={<CheckOutlined />}
-                onClick={() => handleStatusUpdate(record._id, 'resolved')}
+                onClick={() => handleStatusUpdate(record._id, 'closed')}
                 loading={updateInquiryStatusMutation.isLoading}
                 style={{ color: '#52C41A' }}
               />
@@ -255,7 +345,11 @@ const InquiriesList = () => {
     <div>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2} style={{ margin: 0 }}>Inquiries Management</Title>
-        <Button type="primary" icon={<PlusOutlined />}>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => setCreateModalVisible(true)}
+        >
           Add Inquiry
         </Button>
       </div>
@@ -277,10 +371,8 @@ const InquiriesList = () => {
             onChange={handleStatusFilter}
             value={statusFilter || undefined}
           >
-            <Option value="new">New</Option>
             <Option value="pending">Pending</Option>
             <Option value="responded">Responded</Option>
-            <Option value="resolved">Resolved</Option>
             <Option value="closed">Closed</Option>
           </Select>
         </div>
@@ -314,56 +406,329 @@ const InquiriesList = () => {
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             Close
           </Button>,
-          selectedInquiry?.status !== 'resolved' && (
+          selectedInquiry?.status !== 'closed' && (
             <Button
               key="resolve"
               type="primary"
               icon={<CheckOutlined />}
-              onClick={() => handleStatusUpdate(selectedInquiry._id, 'resolved')}
+              onClick={() => handleStatusUpdate(selectedInquiry._id, 'closed')}
               loading={updateInquiryStatusMutation.isLoading}
             >
-              Mark as Resolved
+              Mark as Closed
             </Button>
           ),
         ]}
-        width={600}
+        width={800}
+        style={{ top: 20 }}
       >
         {selectedInquiry && (
-          <div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>User:</strong> {selectedInquiry.user_id?.name} ({selectedInquiry.user_id?.email})
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Property:</strong> {selectedInquiry.property_id?.title}
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Status:</strong>{' '}
-              <Tag color={
-                selectedInquiry.status === 'new' ? 'red' :
-                selectedInquiry.status === 'pending' ? 'orange' :
-                selectedInquiry.status === 'responded' ? 'blue' :
-                selectedInquiry.status === 'resolved' ? 'green' : 'default'
-              }>
-                {selectedInquiry.status?.toUpperCase()}
-              </Tag>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Message:</strong>
-              <div style={{ 
-                marginTop: 8, 
-                padding: 12, 
-                backgroundColor: '#f5f5f5', 
-                borderRadius: 6,
-                whiteSpace: 'pre-wrap'
-              }}>
-                {selectedInquiry.message || 'No message'}
-              </div>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <strong>Received:</strong> {new Date(selectedInquiry.createdAt).toLocaleString()}
-            </div>
-          </div>
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={12}>
+              <Descriptions title="User Information" column={1} size="small">
+                <Descriptions.Item label="Name">
+                  <Space>
+                    <Avatar size="small" icon={<UserOutlined />} src={selectedInquiry.user_id?.profile_image} />
+                    {selectedInquiry.user_id?.name || 'No name'}
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {selectedInquiry.user_id?.email || 'No email'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Phone">
+                  {selectedInquiry.user_id?.phone || 'No phone'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Descriptions title="Property Information" column={1} size="small">
+                <Descriptions.Item label="Property Title">
+                  {selectedInquiry.property_id?.title || 'Unknown Property'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Price">
+                  ${selectedInquiry.property_id?.price?.toLocaleString() || 'N/A'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Col>
+            <Col xs={24}>
+              <Descriptions title="Inquiry Details" column={2} size="small">
+                <Descriptions.Item label="Status">
+                  <Tag color={
+                    selectedInquiry.status === 'pending' ? 'orange' :
+                    selectedInquiry.status === 'responded' ? 'blue' :
+                    selectedInquiry.status === 'closed' ? 'default' : 'default'
+                  }>
+                    {selectedInquiry.status?.toUpperCase()}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Priority">
+                  <Tag color={
+                    selectedInquiry.priority === 'high' ? 'red' :
+                    selectedInquiry.priority === 'medium' ? 'orange' :
+                    selectedInquiry.priority === 'low' ? 'green' : 'default'
+                  }>
+                    {selectedInquiry.priority?.toUpperCase() || 'MEDIUM'}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Received" span={2}>
+                  {new Date(selectedInquiry.createdAt).toLocaleString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="Message" span={2}>
+                  <div style={{ 
+                    marginTop: 8, 
+                    padding: 12, 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: 6,
+                    whiteSpace: 'pre-wrap',
+                    maxHeight: 200,
+                    overflow: 'auto'
+                  }}>
+                    {selectedInquiry.message || 'No message'}
+                  </div>
+                </Descriptions.Item>
+              </Descriptions>
+            </Col>
+          </Row>
         )}
+      </Modal>
+
+      {/* Create Inquiry Modal */}
+      <Modal
+        title="Create New Inquiry"
+        open={createModalVisible}
+        onCancel={() => {
+          setCreateModalVisible(false)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setCreateModalVisible(false)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={createInquiryMutation.isLoading}
+          >
+            Create Inquiry
+          </Button>
+        ]}
+        width={600}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateInquiry}
+          initialValues={{
+            status: 'pending',
+            priority: 'medium',
+          }}
+        >
+          <Form.Item
+            name="user_id"
+            label="User"
+            rules={[{ required: true, message: 'Please select a user' }]}
+          >
+            <Select 
+              placeholder="Select a user" 
+              showSearch 
+              loading={usersLoading}
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {usersData?.data?.map(user => (
+                <Option key={user._id} value={user._id}>
+                  {user.name} ({user.email}) {user.phone && `- ${user.phone}`}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="property_id"
+            label="Property"
+            rules={[{ required: true, message: 'Please select a property' }]}
+          >
+            <Select 
+              placeholder="Select a property" 
+              showSearch 
+              loading={propertiesLoading}
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {propertiesData?.data?.map(property => (
+                <Option key={property._id} value={property._id}>
+                  {property.title} - ${property.price?.toLocaleString()}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="message"
+            label="Message"
+            rules={[{ required: true, message: 'Please enter a message' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Enter inquiry message"
+              maxLength={1000}
+              showCount
+            />
+          </Form.Item>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="status"
+                label="Status"
+                rules={[{ required: true, message: 'Please select status' }]}
+              >
+                <Select placeholder="Select status">
+                  <Option value="pending">Pending</Option>
+                  <Option value="responded">Responded</Option>
+                  <Option value="closed">Closed</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="priority"
+                label="Priority"
+                rules={[{ required: true, message: 'Please select priority' }]}
+              >
+                <Select placeholder="Select priority">
+                  <Option value="low">Low</Option>
+                  <Option value="medium">Medium</Option>
+                  <Option value="high">High</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Edit Inquiry Modal */}
+      <Modal
+        title="Edit Inquiry"
+        open={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setEditModalVisible(false)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={updateInquiryMutation.isLoading}
+          >
+            Update Inquiry
+          </Button>
+        ]}
+        width={600}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleUpdateInquiry}
+        >
+          <Form.Item
+            name="user_id"
+            label="User"
+            rules={[{ required: true, message: 'Please select a user' }]}
+          >
+            <Select 
+              placeholder="Select a user" 
+              showSearch 
+              loading={usersLoading}
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {usersData?.data?.map(user => (
+                <Option key={user._id} value={user._id}>
+                  {user.name} ({user.email}) {user.phone && `- ${user.phone}`}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="property_id"
+            label="Property"
+            rules={[{ required: true, message: 'Please select a property' }]}
+          >
+            <Select 
+              placeholder="Select a property" 
+              showSearch 
+              loading={propertiesLoading}
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {propertiesData?.data?.map(property => (
+                <Option key={property._id} value={property._id}>
+                  {property.title} - ${property.price?.toLocaleString()}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="message"
+            label="Message"
+            rules={[{ required: true, message: 'Please enter a message' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Enter inquiry message"
+              maxLength={1000}
+              showCount
+            />
+          </Form.Item>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="status"
+                label="Status"
+                rules={[{ required: true, message: 'Please select status' }]}
+              >
+                <Select placeholder="Select status">
+                  <Option value="pending">Pending</Option>
+                  <Option value="responded">Responded</Option>
+                  <Option value="closed">Closed</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="priority"
+                label="Priority"
+                rules={[{ required: true, message: 'Please select priority' }]}
+              >
+                <Select placeholder="Select priority">
+                  <Option value="low">Low</Option>
+                  <Option value="medium">Medium</Option>
+                  <Option value="high">High</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
       </Modal>
     </div>
   )
