@@ -15,6 +15,13 @@ import {
   Tooltip,
   Modal,
   DatePicker,
+  Form,
+  Row,
+  Col,
+  Divider,
+  Descriptions,
+  Input as TextArea,
+  TimePicker,
 } from 'antd'
 import {
   CalendarOutlined,
@@ -46,8 +53,41 @@ const AppointmentsList = () => {
   const [pageSize, setPageSize] = useState(10)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [form] = Form.useForm()
 
   const queryClient = useQueryClient()
+
+  // Fetch users for dropdown
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+  } = useQuery({
+    queryKey: ['users-dropdown'],
+    queryFn: () => adminApi.getUsers({ limit: 1000, role: 'user' }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
+  // Fetch agents for dropdown
+  const {
+    data: agentsData,
+    isLoading: agentsLoading,
+  } = useQuery({
+    queryKey: ['agents-dropdown'],
+    queryFn: () => adminApi.getAgents({ limit: 1000 }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
+  // Fetch properties for dropdown
+  const {
+    data: propertiesData,
+    isLoading: propertiesLoading,
+  } = useQuery({
+    queryKey: ['properties-dropdown'],
+    queryFn: () => adminApi.getProperties({ limit: 1000 }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
 
   // Fetch appointments data
   const {
@@ -91,6 +131,34 @@ const AppointmentsList = () => {
     },
   })
 
+  // Create appointment mutation
+  const createAppointmentMutation = useMutation({
+    mutationFn: adminApi.createAppointment,
+    onSuccess: () => {
+      message.success('Appointment created successfully')
+      setCreateModalVisible(false)
+      form.resetFields()
+      queryClient.invalidateQueries(['appointments'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to create appointment')
+    },
+  })
+
+  // Update appointment mutation
+  const updateAppointmentMutation = useMutation({
+    mutationFn: ({ id, data }) => adminApi.updateAppointment(id, data),
+    onSuccess: () => {
+      message.success('Appointment updated successfully')
+      setEditModalVisible(false)
+      form.resetFields()
+      queryClient.invalidateQueries(['appointments'])
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.message || 'Failed to update appointment')
+    },
+  })
+
   const handleViewAppointment = (appointment) => {
     setSelectedAppointment(appointment)
     setDetailModalVisible(true)
@@ -102,6 +170,42 @@ const AppointmentsList = () => {
 
   const handleDeleteAppointment = (appointmentId) => {
     deleteAppointmentMutation.mutate(appointmentId)
+  }
+
+  const handleCreateAppointment = (values) => {
+    const appointmentData = {
+      ...values,
+      appointment_date: values.appointment_date?.format('YYYY-MM-DD'),
+      appointment_time: values.appointment_time?.format('HH:mm'),
+      duration: parseInt(values.duration) || 30, // Convert to number, default to 30 minutes
+    }
+    createAppointmentMutation.mutate(appointmentData)
+  }
+
+  const handleEditAppointment = (appointment) => {
+    setSelectedAppointment(appointment)
+    form.setFieldsValue({
+      user_id: appointment.user_id?._id,
+      agent_id: appointment.agent_id?._id,
+      property_id: appointment.property_id?._id,
+      appointment_date: appointment.appointment_date ? dayjs(appointment.appointment_date) : null,
+      appointment_time: appointment.appointment_time ? dayjs(appointment.appointment_time, 'HH:mm') : null,
+      duration: appointment.duration || 30,
+      appointment_type: appointment.appointment_type || 'viewing',
+      status: appointment.status || 'scheduled',
+      notes: appointment.notes || '',
+    })
+    setEditModalVisible(true)
+  }
+
+  const handleUpdateAppointment = (values) => {
+    const appointmentData = {
+      ...values,
+      appointment_date: values.appointment_date?.format('YYYY-MM-DD'),
+      appointment_time: values.appointment_time?.format('HH:mm'),
+      duration: parseInt(values.duration) || 30, // Convert to number, default to 30 minutes
+    }
+    updateAppointmentMutation.mutate({ id: selectedAppointment._id, data: appointmentData })
   }
 
   const columns = [
@@ -228,6 +332,14 @@ const AppointmentsList = () => {
               onClick={() => handleViewAppointment(record)}
             />
           </Tooltip>
+          <Tooltip title="Edit Appointment">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => handleEditAppointment(record)}
+            />
+          </Tooltip>
           {record.status === 'scheduled' && (
             <Tooltip title="Confirm Appointment">
               <Button
@@ -297,7 +409,11 @@ const AppointmentsList = () => {
     <div>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2} style={{ margin: 0 }}>Appointments Management</Title>
-        <Button type="primary" icon={<PlusOutlined />}>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => setCreateModalVisible(true)}
+        >
           Schedule Appointment
         </Button>
       </div>
@@ -433,6 +549,365 @@ const AppointmentsList = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Create Appointment Modal */}
+      <Modal
+        title="Schedule New Appointment"
+        open={createModalVisible}
+        onCancel={() => {
+          setCreateModalVisible(false)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setCreateModalVisible(false)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={createAppointmentMutation.isLoading}
+          >
+            Schedule Appointment
+          </Button>
+        ]}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateAppointment}
+          initialValues={{
+            duration: 30,
+            appointment_type: 'viewing',
+            status: 'scheduled',
+          }}
+        >
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="user_id"
+                label="User"
+                rules={[{ required: true, message: 'Please select a user' }]}
+              >
+                <Select 
+                  placeholder="Select user"
+                  loading={usersLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {usersData?.data?.map(user => (
+                    <Option key={user._id} value={user._id}>
+                      {user.name} ({user.email})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="agent_id"
+                label="Agent"
+                rules={[{ required: true, message: 'Please select an agent' }]}
+              >
+                <Select 
+                  placeholder="Select agent"
+                  loading={agentsLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {agentsData?.data?.map(agent => (
+                    <Option key={agent._id} value={agent._id}>
+                      {agent.user_id?.name || agent.name} {agent.agency_name ? `(${agent.agency_name})` : ''}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="property_id"
+                label="Property"
+                rules={[{ required: true, message: 'Please select a property' }]}
+              >
+                <Select 
+                  placeholder="Select property"
+                  loading={propertiesLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {propertiesData?.data?.map(property => (
+                    <Option key={property._id} value={property._id}>
+                      {property.title} - ${property.price?.toLocaleString()}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="appointment_type"
+                label="Appointment Type"
+                rules={[{ required: true, message: 'Please select appointment type' }]}
+              >
+                <Select placeholder="Select type">
+                  <Option value="viewing">Property Viewing</Option>
+                  <Option value="consultation">Consultation</Option>
+                  <Option value="inspection">Inspection</Option>
+                  <Option value="meeting">Meeting</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={8}>
+              <Form.Item
+                name="appointment_date"
+                label="Appointment Date"
+                rules={[{ required: true, message: 'Please select appointment date' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Form.Item
+                name="appointment_time"
+                label="Appointment Time"
+                rules={[{ required: true, message: 'Please select appointment time' }]}
+              >
+                <TimePicker style={{ width: '100%' }} format="HH:mm" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Form.Item
+                name="duration"
+                label="Duration"
+                rules={[{ required: true, message: 'Please select duration' }]}
+              >
+                <Select placeholder="Select duration">
+                  <Option value={15}>15 minutes</Option>
+                  <Option value={30}>30 minutes</Option>
+                  <Option value={45}>45 minutes</Option>
+                  <Option value={60}>1 hour</Option>
+                  <Option value={120}>2 hours</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="notes"
+            label="Notes"
+          >
+            <TextArea
+              rows={4}
+              placeholder="Enter any additional notes for the appointment (optional)"
+              maxLength={500}
+              showCount
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit Appointment Modal */}
+      <Modal
+        title="Edit Appointment"
+        open={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false)
+          form.resetFields()
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setEditModalVisible(false)
+            form.resetFields()
+          }}>
+            Cancel
+          </Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            loading={updateAppointmentMutation.isLoading}
+          >
+            Update Appointment
+          </Button>
+        ]}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleUpdateAppointment}
+        >
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="user_id"
+                label="User"
+                rules={[{ required: true, message: 'Please select a user' }]}
+              >
+                <Select 
+                  placeholder="Select user"
+                  loading={usersLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {usersData?.data?.map(user => (
+                    <Option key={user._id} value={user._id}>
+                      {user.name} ({user.email})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="agent_id"
+                label="Agent"
+                rules={[{ required: true, message: 'Please select an agent' }]}
+              >
+                <Select 
+                  placeholder="Select agent"
+                  loading={agentsLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {agentsData?.data?.map(agent => (
+                    <Option key={agent._id} value={agent._id}>
+                      {agent.user_id?.name || agent.name} {agent.agency_name ? `(${agent.agency_name})` : ''}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="property_id"
+                label="Property"
+                rules={[{ required: true, message: 'Please select a property' }]}
+              >
+                <Select 
+                  placeholder="Select property"
+                  loading={propertiesLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {propertiesData?.data?.map(property => (
+                    <Option key={property._id} value={property._id}>
+                      {property.title} - ${property.price?.toLocaleString()}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="appointment_type"
+                label="Appointment Type"
+                rules={[{ required: true, message: 'Please select appointment type' }]}
+              >
+                <Select placeholder="Select type">
+                  <Option value="viewing">Property Viewing</Option>
+                  <Option value="consultation">Consultation</Option>
+                  <Option value="inspection">Inspection</Option>
+                  <Option value="meeting">Meeting</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={8}>
+              <Form.Item
+                name="appointment_date"
+                label="Appointment Date"
+                rules={[{ required: true, message: 'Please select appointment date' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Form.Item
+                name="appointment_time"
+                label="Appointment Time"
+                rules={[{ required: true, message: 'Please select appointment time' }]}
+              >
+                <TimePicker style={{ width: '100%' }} format="HH:mm" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Form.Item
+                name="duration"
+                label="Duration"
+                rules={[{ required: true, message: 'Please select duration' }]}
+              >
+                <Select placeholder="Select duration">
+                  <Option value={15}>15 minutes</Option>
+                  <Option value={30}>30 minutes</Option>
+                  <Option value={45}>45 minutes</Option>
+                  <Option value={60}>1 hour</Option>
+                  <Option value={120}>2 hours</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="status"
+                label="Status"
+                rules={[{ required: true, message: 'Please select status' }]}
+              >
+                <Select placeholder="Select status">
+                  <Option value="scheduled">Scheduled</Option>
+                  <Option value="confirmed">Confirmed</Option>
+                  <Option value="completed">Completed</Option>
+                  <Option value="cancelled">Cancelled</Option>
+                  <Option value="no_show">No Show</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="notes"
+            label="Notes"
+          >
+            <TextArea
+              rows={4}
+              placeholder="Enter any additional notes for the appointment (optional)"
+              maxLength={500}
+              showCount
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   )

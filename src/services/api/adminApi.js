@@ -156,6 +156,11 @@ export const adminApi = {
     return response.data
   },
 
+  updateAppointment: async (appointmentId, appointmentData) => {
+    const response = await api.put(`/admin/appointments/${appointmentId}`, appointmentData)
+    return response.data
+  },
+
   updateAppointmentStatus: async (appointmentId, status) => {
     const response = await api.put(`/admin/appointments/${appointmentId}/status`, { status })
     return response.data
